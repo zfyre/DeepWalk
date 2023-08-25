@@ -1,0 +1,1 @@
+skipgram(walk,W,LR)
