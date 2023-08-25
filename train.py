@@ -28,7 +28,7 @@ for node in G:
     L = Nbd
     G_Stored.append(L)
 
-print(G_Stored)
+# print(G_Stored)
 
 '''Hyper Parameters'''
 
@@ -75,6 +75,8 @@ X = split[0].detach().numpy()
 Y = split[1].detach().numpy()
 
 plt.scatter(X,Y)
-for i in range(len(V)):
+
+# Remove the Following line for running a big graph
+for i in range(len(V)):   
     plt.annotate(i+1, (X[i], Y[i]))
 plt.show()
