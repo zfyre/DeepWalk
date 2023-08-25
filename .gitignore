@@ -1,4 +1,4 @@
 *.mtx
 *.pickle
 __pycache__
-tempCodeRunnerFile.py
+/tempCodeRunnerFile.py

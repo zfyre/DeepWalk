@@ -61,8 +61,8 @@ class HierarchialModel(nn.Module):
         # Hypothesis / PHI(v_j)
         h = torch.matmul(mask,self.encoder)
 
-        
 
+        
         """
             To Implement...
 
