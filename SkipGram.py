@@ -41,28 +41,56 @@ class Vanilla(nn.Module):
         decoded_space = torch.matmul(encoded_space, self.decoder).to(self.device)
         return decoded_space.to(self.device)
     
-    
-""" Vanilla Model Using the O(log(N)) Softmax """
+
+
+""" Heirarchical Model Using the O(log(N)) Softmax """
+
+def build(size_vertex):
+    leaf = []
+    def tree_construction(tl, tr, v):
+        if(tl == tr):
+            leaf.append(v)
+            return
+        
+        tm = (tl+tr)>>1
+        tree_construction(tl,tm,2*v)
+        tree_construction(tm+1,tr,2*v+1)
+
+    tree_construction(1,size_vertex+1,1)
+    return leaf
+
+def path_root_v(vertex):
+    path = []
+    while(vertex!=1):
+        path.append(vertex)
+        vertex //= 2
+    path=path[::-1]
+    return path
 
 class HierarchialModel(nn.Module):
     def __init__(self, size_vertex, D, device=None) -> None:
         super(HierarchialModel, self).__init__()
         self.encoder = nn.parameter.Parameter(torch.rand((size_vertex, D)), requires_grad=True).to(device) # phi
         # These are the logistic parameters for each node which outputs the left as well as the right child for a particular node.
-        self.logistic_probability_matrix = nn.parameter.Parameter(torch.rand((""" # of Binary Tree nodes """, D)),requires_grad=True).to(device) 
-        self.non_leaf_count = size_vertex - 1
+        """( # of Binary Tree nodes, D)"""
+        self.logistic_probability_matrix = nn.parameter.Parameter(torch.rand(4*size_vertex,D),requires_grad=True).to(device) 
         self.size_vertex = size_vertex
+        self.leaf_nodes = build(self.size_vertex)
+        self.device = device
 
-    # Give's The P(v_i|PHI(v_j))
-    def forward(self, v_i, v_j):
-        mask = torch.zeros(self.size_vertex)
-        mask[v_j] = 1
+        def H_skipgram(randwalk, window, learning_rate):
+            for j in range(len(randwalk)):
+                for k in range(max(0,j-window) , min(j+window, len(randwalk))):
 
-        # Hypothesis / PHI(v_j)
-        h = torch.matmul(mask,self.encoder)
+                    prob = self.forward(randwalk[k],randwalk[j])
+                    loss = -torch.log(prob)
+                    loss.backward()
 
+                    for param in self.parameters():
+                        param.data.sub_(learning_rate*param.grad)
+                        param.grad.data.zero_()
 
-        
+        self.H_skipgram = H_skipgram
         """
             To Implement...
 
@@ -75,5 +103,28 @@ class HierarchialModel(nn.Module):
             DOUBT: Should we try to accumulate the losses for all the stages? But we do'nt do such kind of thing when dealing with the NNs in general, we only try to find a loss using the final layer output.
 
         """
+         
+        """ Our Original Graph is 0 indexed and Tree is 1 Based!!"""
+
+    # Give's The P(v_i|PHI(v_j))
+    def forward(self, v_i, v_j):
+        mask = torch.zeros(self.size_vertex)
+        mask[v_j] = 1
+        # Hypothesis / PHI(v_j)
+        h = torch.matmul(mask,self.encoder)
+
+        new_node = self.leaf_nodes[v_i]  # V_I's value in the tree
+        path = path_root_v(new_node)
+        p = torch.tensor([1.0])
+        for j in range(0,len(path)-1):
+            mult = -1
+            if(path[j+1]==2*path[j]): # Left child
+                mult = 1
+            p = p*torch.sigmoid(mult*torch.matmul(self.logistic_probability_matrix[path[j]], h)).to(self.device)
+        
+        return p
+
+            
+
 
 
